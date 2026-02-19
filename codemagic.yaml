@@ -15,38 +15,26 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
-      - name: Nuclear Option - Remove All Entitlements (Ruby)
+      - name: Nuclear Option - Remove All Entitlements
         script: |
           gem install xcodeproj --no-document
-          ruby -e "
-          require 'xcodeproj'
-          project = Xcodeproj::Project.open('MedSci.xcodeproj')
-          
-          # 1. Remove as capacidades do sistema do alvo principal
-          if project.root_object.attributes['TargetAttributes']
-            project.root_object.attributes['TargetAttributes'].each do |target, attributes|
-              attributes.delete('SystemCapabilities')
-            end
-          end
-          
-          # 2. Remove as exigencias de arquivos Entitlements de todas as configuracoes
-          project.build_configurations.each do |config|
-            config.build_settings.delete('CODE_SIGN_ENTITLEMENTS')
-          end
-          project.targets.each do |target|
-            target.build_configurations.each do |config|
-              config.build_settings.delete('CODE_SIGN_ENTITLEMENTS')
-            end
-          end
-          
-          # 3. Salva o projeto completamente limpo
-          project.save
-          "
-          # 4. Deleta fisicamente os arquivos .entitlements do disco para nao sobrar rastro
+          ruby -e "require 'xcodeproj'; project = Xcodeproj::Project.open('MedSci.xcodeproj'); if project.root_object.attributes['TargetAttributes']; project.root_object.attributes['TargetAttributes'].each do |t, a| a.delete('SystemCapabilities') end; end; project.build_configurations.each do |c| c.build_settings.delete('CODE_SIGN_ENTITLEMENTS') end; project.targets.each do |t| t.build_configurations.each do |c| c.build_settings.delete('CODE_SIGN_ENTITLEMENTS') end; end; project.save"
           find . -name '*.entitlements' -type f -delete
       - name: Fetch and Create Apple Signing Profiles
         script: |
-          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
-            --type IOS_APP_STORE \
-            --create
-      - name:
+          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" --type IOS_APP_STORE --create
+      - name: Add Certificates to Mac Keychain
+        script: |
+          keychain add-certificates
+      - name: Install CocoaPods dependencies
+        script: |
+          pod install
+      - name: Apply Provisioning Profiles to Xcode
+        script: |
+          xcode-project use-profiles
+      - name: Build and sign iOS App
+        script: |
+          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
