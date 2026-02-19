@@ -35,4 +35,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - seu-email@exemplo.com # Você pode colocar seu e-mail real aqui se quiser receber um aviso
+          - rafaelmiguelalonso@gmail.com # Você pode colocar seu e-mail real aqui se quiser receber um aviso
