@@ -15,13 +15,11 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
-      - name: Definitive Fix - Zero Entitlements
+      - name: Precise Capabilities Removal
         script: |
-          # 1. Esvazia fisicamente qualquer arquivo de permissão (deixa em branco)
+          gem install xcodeproj --no-document
+          ruby -e "require 'xcodeproj'; p = Xcodeproj::Project.open('MedSci.xcodeproj'); if p.root_object.attributes['TargetAttributes']; p.root_object.attributes['TargetAttributes'].each do |t, a| if a['SystemCapabilities']; a['SystemCapabilities'].delete('com.apple.Push'); a['SystemCapabilities'].delete('com.apple.Developer.associated-domains'); end; end; end; p.save"
           find . -name "*.entitlements" -type f -exec sh -c 'echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict/></plist>" > "{}"' \;
-          
-          # 2. Apaga as chaves de Entitlements do arquivo de configuração do Xcode
-          sed -i '' 's/CODE_SIGN_ENTITLEMENTS = .*;/CODE_SIGN_ENTITLEMENTS = "";/g' MedSci.xcodeproj/project.pbxproj || true
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
@@ -36,13 +34,11 @@ workflows:
       - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
-      - name: Build and sign iOS App (Overriding Capabilities)
+      - name: Build and sign iOS App
         script: |
-          # A ORDEM DIRETA: O comando CODE_SIGN_ENTITLEMENTS="" no final força o Xcode a compilar sem restrições
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            CODE_SIGN_ENTITLEMENTS=""
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
