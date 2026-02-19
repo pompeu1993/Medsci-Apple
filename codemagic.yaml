@@ -6,9 +6,6 @@ workflows:
     integrations:
       app_store_connect: ChaveMedSci
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.medsci.app.medsciprotocolos
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
@@ -32,7 +29,3 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      email:
-        recipients:
-          - rafaelmiguelalonso@gmail.com # Você pode colocar seu e-mail real aqui se quiser receber um aviso
