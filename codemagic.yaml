@@ -15,14 +15,13 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
-      - name: Smart Clean Capabilities (The Perfect Fix)
+      - name: Definitive Fix - Zero Entitlements
         script: |
-          gem install xcodeproj --no-document
-          ruby -e "require 'xcodeproj'; project = Xcodeproj::Project.open('MedSci.xcodeproj'); if project.root_object.attributes['TargetAttributes']; project.root_object.attributes['TargetAttributes'].each do |t, a| a.delete('SystemCapabilities') end; end; project.save"
-          ENTITLEMENTS=$(find . -type f -name "*.entitlements" | head -n 1)
-          if [ -n "$ENTITLEMENTS" ]; then
-            echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict/></plist>' > "$ENTITLEMENTS"
-          fi
+          # 1. Esvazia fisicamente qualquer arquivo de permissão (deixa em branco)
+          find . -name "*.entitlements" -type f -exec sh -c 'echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict/></plist>" > "{}"' \;
+          
+          # 2. Apaga as chaves de Entitlements do arquivo de configuração do Xcode
+          sed -i '' 's/CODE_SIGN_ENTITLEMENTS = .*;/CODE_SIGN_ENTITLEMENTS = "";/g' MedSci.xcodeproj/project.pbxproj || true
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
@@ -37,11 +36,13 @@ workflows:
       - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
-      - name: Build and sign iOS App
+      - name: Build and sign iOS App (Overriding Capabilities)
         script: |
+          # A ORDEM DIRETA: O comando CODE_SIGN_ENTITLEMENTS="" no final força o Xcode a compilar sem restrições
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            CODE_SIGN_ENTITLEMENTS=""
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
