@@ -13,9 +13,15 @@ workflows:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
     scripts:
+      - name: Criar Perfil de Assinatura na Apple
+        script: |
+          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" --type IOS_APP_STORE --create
       - name: Install CocoaPods dependencies
         script: |
           pod install
+      - name: Forçar Bundle ID correto no Xcode
+        script: |
+          xcode-project use-profiles
       - name: Build and sign iOS App
         script: |
           xcode-project build-ipa \
