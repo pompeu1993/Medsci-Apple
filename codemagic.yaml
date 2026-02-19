@@ -15,11 +15,27 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
-      - name: Precise Capabilities Removal
+      - name: The Eradicator (Python Deep Clean)
         script: |
-          gem install xcodeproj --no-document
-          ruby -e "require 'xcodeproj'; p = Xcodeproj::Project.open('MedSci.xcodeproj'); if p.root_object.attributes['TargetAttributes']; p.root_object.attributes['TargetAttributes'].each do |t, a| if a['SystemCapabilities']; a['SystemCapabilities'].delete('com.apple.Push'); a['SystemCapabilities'].delete('com.apple.Developer.associated-domains'); end; end; end; p.save"
-          find . -name "*.entitlements" -type f -exec sh -c 'echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict/></plist>" > "{}"' \;
+          python3 -c '
+          import os, re
+          # 1. Varre o projeto e esvazia todos os arquivos de permissao
+          for root, dirs, files in os.walk("."):
+              for file in files:
+                  if file.endswith(".entitlements"):
+                      with open(os.path.join(root, file), "w") as f:
+                          f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict/></plist>")
+          
+          # 2. Abre o coracao do Xcode e arranca as exigencias
+          pbx = "MedSci.xcodeproj/project.pbxproj"
+          if os.path.exists(pbx):
+              with open(pbx, "r") as f:
+                  content = f.read()
+              # Deleta o bloco inteiro de capacidades do sistema
+              content = re.sub(r"SystemCapabilities\s*=\s*\{.*?\};", "", content, flags=re.DOTALL)
+              with open(pbx, "w") as f:
+                  f.write(content)
+          '
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
