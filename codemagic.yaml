@@ -15,15 +15,26 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
-      - name: Bypass Apple Requirements (Hack)
+      - name: Surgical Removal of Apple Requirements (Ruby)
         script: |
-          ENTITLEMENTS_FILE=$(find . -type f -name "*.entitlements" | head -n 1)
-          if [ -n "$ENTITLEMENTS_FILE" ]; then
-            /usr/libexec/PlistBuddy -c "Delete :aps-environment" "$ENTITLEMENTS_FILE" || true
-            /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.associated-domains" "$ENTITLEMENTS_FILE" || true
+          gem install xcodeproj --no-document
+          ruby -e "
+          require 'xcodeproj'
+          project_path = 'MedSci.xcodeproj'
+          project = Xcodeproj::Project.open(project_path)
+          project.root_object.attributes['TargetAttributes'].each do |target, attributes|
+            if attributes['SystemCapabilities']
+              attributes['SystemCapabilities'].delete('com.apple.Push')
+              attributes['SystemCapabilities'].delete('com.apple.Developer.associated-domains')
+            end
+          end
+          project.save
+          "
+          ENTITLEMENTS=$(find . -type f -name "*.entitlements" | head -n 1)
+          if [ -n "$ENTITLEMENTS" ]; then
+            /usr/libexec/PlistBuddy -c "Delete :aps-environment" "$ENTITLEMENTS" || true
+            /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.associated-domains" "$ENTITLEMENTS" || true
           fi
-          sed -i '' '/com.apple.Push/d' MedSci.xcodeproj/project.pbxproj || true
-          sed -i '' '/com.apple.Developer.associated-domains/d' MedSci.xcodeproj/project.pbxproj || true
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
