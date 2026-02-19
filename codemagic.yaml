@@ -8,7 +8,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.suaempresa.medsci # ⚠️ ATENÇÃO: Troque pelo seu Bundle ID real!
+        bundle_identifier: com.medsci.app.medsciprotocolos # ⚠️ ATENÇÃO: Troque pelo seu Bundle ID real!
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
@@ -27,4 +27,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - seu-email@gmail.com # Coloque seu e-mail aqui para ser avisado quando o app ficar pronto
+          - rafaelmiguelalonso@gmail.com # Coloque seu e-mail aqui para ser avisado quando o app ficar pronto
