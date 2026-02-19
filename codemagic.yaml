@@ -8,25 +8,32 @@ workflows:
     environment:
       groups:
         - apple_certs
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.medsci.app.medsciprotocolos
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
     scripts:
+      - name: Initialize Mac Keychain
+        script: |
+          keychain initialize
+      - name: Fetch and Create Apple Signing Profiles
+        script: |
+          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add Certificates to Mac Keychain
+        script: |
+          keychain add-certificates
       - name: Install CocoaPods dependencies
         script: |
           pod install
-      - name: Force Bundle ID
-        script: |
-          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = com.medsci.app.medsciprotocolos;/g" MedSci.xcodeproj/project.pbxproj || true
       - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
       - name: Build and sign iOS App
         script: |
-          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
