@@ -6,15 +6,23 @@ workflows:
     integrations:
       app_store_connect: ChaveMedSci
     environment:
+      groups:
+        - apple_certs
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
     scripts:
+      - name: Initialize Mac Keychain
+        script: |
+          keychain initialize
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
             --type IOS_APP_STORE \
             --create
+      - name: Add Certificates to Mac Keychain
+        script: |
+          keychain add-certificates
       - name: Install CocoaPods dependencies
         script: |
           pod install
