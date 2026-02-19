@@ -4,22 +4,24 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m1
     integrations:
-      app_store_connect: ChaveMedSci # Esse é o nome que você deu para a chave no Codemagic
+      app_store_connect: ChaveMedSci
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.medsci.app.medsciprotocolos # ⚠️ ATENÇÃO: Troque pelo seu Bundle ID real!
+        bundle_identifier: com.medsci.app.medsciprotocolos
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
     scripts:
-      - name: Criar Perfil de Assinatura na Apple
+      - name: Fetch and Create Apple Signing Profiles
         script: |
-          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" --type IOS_APP_STORE --create
+          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
+            --type IOS_APP_STORE \
+            --create
       - name: Install CocoaPods dependencies
         script: |
           pod install
-      - name: Forçar Bundle ID correto no Xcode
+      - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
       - name: Build and sign iOS App
@@ -33,4 +35,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - rafaelmiguelalonso@gmail.com # Coloque seu e-mail aqui para ser avisado quando o app ficar pronto
+          - seu-email@exemplo.com # Você pode colocar seu e-mail real aqui se quiser receber um aviso
