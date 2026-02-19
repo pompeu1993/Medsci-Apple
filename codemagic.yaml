@@ -8,27 +8,19 @@ workflows:
     environment:
       groups:
         - apple_certs
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.medsci.app.medsciprotocolos
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
     scripts:
-      - name: Initialize Mac Keychain
-        script: |
-          keychain initialize
-      - name: Nuclear Option - Remove All Entitlements
-        script: |
-          gem install xcodeproj --no-document
-          ruby -e "require 'xcodeproj'; project = Xcodeproj::Project.open('MedSci.xcodeproj'); if project.root_object.attributes['TargetAttributes']; project.root_object.attributes['TargetAttributes'].each do |t, a| a.delete('SystemCapabilities') end; end; project.build_configurations.each do |c| c.build_settings.delete('CODE_SIGN_ENTITLEMENTS') end; project.targets.each do |t| t.build_configurations.each do |c| c.build_settings.delete('CODE_SIGN_ENTITLEMENTS') end; end; project.save"
-          find . -name '*.entitlements' -type f -delete
-      - name: Fetch and Create Apple Signing Profiles
-        script: |
-          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" --type IOS_APP_STORE --create
-      - name: Add Certificates to Mac Keychain
-        script: |
-          keychain add-certificates
       - name: Install CocoaPods dependencies
         script: |
           pod install
+      - name: Force Bundle ID
+        script: |
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = com.medsci.app.medsciprotocolos;/g" MedSci.xcodeproj/project.pbxproj || true
       - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
