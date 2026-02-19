@@ -15,6 +15,15 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
+      - name: Bypass Apple Requirements (Hack)
+        script: |
+          ENTITLEMENTS_FILE=$(find . -type f -name "*.entitlements" | head -n 1)
+          if [ -n "$ENTITLEMENTS_FILE" ]; then
+            /usr/libexec/PlistBuddy -c "Delete :aps-environment" "$ENTITLEMENTS_FILE" || true
+            /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.associated-domains" "$ENTITLEMENTS_FILE" || true
+          fi
+          sed -i '' '/com.apple.Push/d' MedSci.xcodeproj/project.pbxproj || true
+          sed -i '' '/com.apple.Developer.associated-domains/d' MedSci.xcodeproj/project.pbxproj || true
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
