@@ -15,6 +15,33 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
+      - name: PWABuilder Surgical Fix (Info.plist + Entitlements)
+        script: |
+          # 1. O grande vilão: Remove a exigência oculta de background notifications do Info.plist
+          find . -name "Info.plist" -not -path "*/Pods/*" -exec /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" {} \; || true
+          
+          # 2. Limpa o arquivo de entitlements real e oficial (sem criar arquivos fantasmas)
+          ENT_FILE=$(find . -name "*.entitlements" -not -path "*/Pods/*" | head -n 1)
+          if [ -n "$ENT_FILE" ]; then
+            /usr/libexec/PlistBuddy -c "Delete :aps-environment" "$ENT_FILE" || true
+            /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.associated-domains" "$ENT_FILE" || true
+          fi
+          
+          # 3. Limpa as exigências do projeto base do Xcode
+          gem install xcodeproj --no-document
+          ruby -e "
+          require 'xcodeproj'
+          p = Xcodeproj::Project.open('MedSci.xcodeproj')
+          if p.root_object.attributes['TargetAttributes']
+            p.root_object.attributes['TargetAttributes'].each do |t, a|
+              if a['SystemCapabilities']
+                a['SystemCapabilities'].delete('com.apple.Push')
+                a['SystemCapabilities'].delete('com.apple.Developer.associated-domains')
+              end
+            end
+          end
+          p.save
+          "
       - name: Fetch and Create Apple Signing Profiles
         script: |
           app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
@@ -26,9 +53,6 @@ workflows:
       - name: Install CocoaPods dependencies
         script: |
           pod install
-      - name: Force Manual Signing
-        script: |
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' MedSci.xcodeproj/project.pbxproj || true
       - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
