@@ -16,6 +16,13 @@ workflows:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
+      - name: Fix App Icon Transparency (Apple Requirement)
+        script: |
+          # Instala o editor de imagens e pinta qualquer fundo transparente de branco
+          brew install imagemagick
+          find . -type f -name "*.png" | grep -i "appicon" | while read -r img; do
+            mogrify -background white -alpha remove -alpha off "$img" || true
+          done
       - name: PWABuilder Ultimate Scrub & Cache Clean
         script: |
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" MedSci.xcodeproj/project.pbxproj || true
