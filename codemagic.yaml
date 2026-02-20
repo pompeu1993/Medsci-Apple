@@ -11,13 +11,27 @@ workflows:
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.medsci.app.medsciprotocolos
     scripts:
+      - name: Initialize Mac Keychain
+        script: |
+          keychain initialize
+      - name: Fetch and Create Apple Signing Profiles
+        script: |
+          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add Certificates to Mac Keychain
+        script: |
+          keychain add-certificates
       - name: Install CocoaPods dependencies
         script: |
           pod install
+      - name: Force Manual Signing
+        script: |
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' MedSci.xcodeproj/project.pbxproj || true
+      - name: Apply Provisioning Profiles to Xcode
+        script: |
+          xcode-project use-profiles
       - name: Build and sign iOS App
         script: |
           xcode-project build-ipa \
