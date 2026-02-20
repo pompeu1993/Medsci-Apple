@@ -11,54 +11,36 @@ workflows:
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
+        BUNDLE_ID: "com.medsci.app.medsciprotocolos"
     scripts:
       - name: Initialize Mac Keychain
         script: |
           keychain initialize
-      - name: The Master Illusion (Fake Entitlements)
-        script: |
-          # 1. Limpa o Info.plist (que denuncia as notificacoes por baixo dos panos)
-          find . -name "Info.plist" -not -path "*/Pods/*" -exec /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" {} \; || true
-          
-          # 2. Cria o arquivo de permissoes falso e 100% vazio na raiz do projeto
-          echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict/></plist>' > Empty.entitlements
-          
-          # 3. Redireciona todas as rotas do Xcode para olhar apenas para o arquivo falso
-          gem install xcodeproj --no-document
-          ruby -e "
-          require 'xcodeproj'
-          p = Xcodeproj::Project.open('MedSci.xcodeproj')
-          if p.root_object.attributes['TargetAttributes']
-            p.root_object.attributes['TargetAttributes'].each { |t, a| a.delete('SystemCapabilities') }
-          end
-          p.targets.each do |t|
-            t.build_configurations.each do |c|
-              if c.build_settings['CODE_SIGN_ENTITLEMENTS']
-                c.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Empty.entitlements'
-              end
-            end
-          end
-          p.save
-          "
       - name: Fetch and Create Apple Signing Profiles
         script: |
-          app-store-connect fetch-signing-files "com.medsci.app.medsciprotocolos" \
-            --type IOS_APP_STORE \
-            --create
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
       - name: Add Certificates to Mac Keychain
         script: |
           keychain add-certificates
       - name: Install CocoaPods dependencies
         script: |
           pod install
+      - name: Set Manual Signing in Xcode
+        script: |
+          # Esse comando força o Xcode a aceitar o perfil que baixamos sem fazer perguntas
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' MedSci.xcodeproj/project.pbxproj || true
       - name: Apply Provisioning Profiles to Xcode
         script: |
           xcode-project use-profiles
       - name: Build and sign iOS App
         script: |
+          # Aqui nos pegamos o UUID do perfil que o Codemagic baixou e injetamos no build
+          PROVISIONING_PROFILE_UUID=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -n 1 | xargs basename -s .mobileprovision)
+          
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --provisioning-profile "$PROVISIONING_PROFILE_UUID"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
