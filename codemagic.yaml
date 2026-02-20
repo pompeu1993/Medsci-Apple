@@ -18,24 +18,13 @@ workflows:
           keychain initialize
       - name: PWABuilder Ultimate Scrub & Cache Clean
         script: |
-          # 1. Garante o Bundle ID exato (Se o PWABuilder gerou um nome genérico, o perfil falha)
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" MedSci.xcodeproj/project.pbxproj || true
-
-          # 2. Apaga fisicamente os arquivos de Entitlements
           find . -name "*.entitlements" -type f -delete
-
-          # 3. Deleta a linha inteira que chama o entitlements no código base do Xcode
           sed -i '' '/CODE_SIGN_ENTITLEMENTS/d' MedSci.xcodeproj/project.pbxproj || true
-
-          # 4. Deleta o bloco de capacidades nativas na força bruta
           sed -i '' '/SystemCapabilities/,/};/d' MedSci.xcodeproj/project.pbxproj || true
           sed -i '' '/com.apple.Push/d' MedSci.xcodeproj/project.pbxproj || true
           sed -i '' '/com.apple.Developer.associated-domains/d' MedSci.xcodeproj/project.pbxproj || true
-
-          # 5. Remove exigências escondidas no Info.plist
           find . -name "Info.plist" -not -path "*/Pods/*" -exec /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" {} \; || true
-
-          # 6. O SEGREDO: Limpar o CACHE do Xcode antes de compilar para esquecer os erros passados
           xcodebuild clean -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME"
       - name: Fetch and Create Apple Signing Profiles
         script: |
@@ -59,3 +48,7 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
