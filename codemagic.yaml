@@ -11,36 +11,18 @@ workflows:
       vars:
         XCODE_WORKSPACE: "MedSci.xcworkspace"
         XCODE_SCHEME: "MedSci"
-        BUNDLE_ID: "com.medsci.app.medsciprotocolos"
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.medsci.app.medsciprotocolos
     scripts:
-      - name: Initialize Mac Keychain
-        script: |
-          keychain initialize
-      - name: Fetch and Create Apple Signing Profiles
-        script: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-      - name: Add Certificates to Mac Keychain
-        script: |
-          keychain add-certificates
       - name: Install CocoaPods dependencies
         script: |
           pod install
-      - name: Set Manual Signing in Xcode
-        script: |
-          # Esse comando força o Xcode a aceitar o perfil que baixamos sem fazer perguntas
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' MedSci.xcodeproj/project.pbxproj || true
-      - name: Apply Provisioning Profiles to Xcode
-        script: |
-          xcode-project use-profiles
       - name: Build and sign iOS App
         script: |
-          # Aqui nos pegamos o UUID do perfil que o Codemagic baixou e injetamos no build
-          PROVISIONING_PROFILE_UUID=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -n 1 | xargs basename -s .mobileprovision)
-          
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --provisioning-profile "$PROVISIONING_PROFILE_UUID"
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
